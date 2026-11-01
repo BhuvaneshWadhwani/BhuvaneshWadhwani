@@ -1,15 +1,10 @@
-<!-- Header banner -->
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&height=200&color=0:02050a,100:0f3a52&text=Hi%2C%20I'm%20Bhuvanesh&fontColor=ffffff&fontSize=44&fontAlignY=38&desc=Computer%20Vision%20%C2%B7%20Deep%20Learning%20%C2%B7%20Applied%20AI&descSize=18&descAlignY=60" alt="Header" />
+<h1 align="center">Hi, I'm Bhuvanesh 👋</h1>
 
 <div align="center">
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=500&size=22&pause=1200&color=00E5FF&center=true&vCenter=true&width=650&height=40&lines=Computer+Vision+%26+Deep+Learning;Real-Time+Object+Detection+on+the+Edge;Satellite+Imagery+%26+Applied+ML;Aiming+for+orbit+%F0%9F%9A%80)](https://git.io/typing-svg)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=500&size=22&pause=1200&color=00E5FF&center=true&vCenter=true&width=650&height=40&lines=Computer+Vision+%26+Deep+Learning;Machine+Learning+on+Real-World+Data;Geospatial+%26+Remote+Sensing)](https://git.io/typing-svg)
 
 <img src="./assets/rocket-retro.svg" width="100%" alt="Pixel-art space shuttle counting down and launching past satellites" />
-
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/YOUR-HANDLE)
-[![Email](https://img.shields.io/badge/Email-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:YOUR-EMAIL)
-![Profile views](https://komarev.com/ghpvc/?username=BhuvaneshWadhwani&style=for-the-badge&color=00B8D4&label=PROFILE+VIEWS)
 
 </div>
 
@@ -17,14 +12,11 @@
 
 ## 🛰️ About Me
 
-I'm an **M.Sc. Social and Economic Data Science** student at the **University of Konstanz, Germany**, and I like building machine learning systems that actually run, not just notebooks that score well.
+I'm an M.Sc. Social and Economic Data Science student at the University of Konstanz, Germany, with a background in behavioural research and statistical modelling.
 
-I work across the whole ML pipeline: data preparation, model development, evaluation, and getting models to run fast on real hardware.
+Alongside my studies, I work as a Software Developer at w3 data, contributing to the development of existing weather-data processing systems and exploring new methods for processing meteorological data.
 
-- 🎓 Studying Social and Economic Data Science @ University of Konstanz
-- 🏎️ Building autonomous-driving perception for **Bodensee Racing Team** (Formula Student)
-- 🔭 Interested in object detection, image analysis, and satellite imagery
-- 🚀 Rocket enthusiast, and yes, I've even trained a model to predict launch failures
+My technical interests span Machine Learning, Deep Learning, and Computer Vision, particularly object detection, image analysis, and the application of AI to complex real-world data. I'm also interested in geospatial and remote-sensing applications, alongside broader developments in applied AI.
 
 ---
 
@@ -66,20 +58,11 @@ I work across the whole ML pipeline: data preparation, model development, evalua
 
 ## 🎯 Areas of Interest
 
-| 👁️ Computer Vision | 🧠 Deep Learning | 🛰️ Remote Sensing | ⚙️ Applied AI |
-|:---:|:---:|:---:|:---:|
-| Object detection<br/>Image segmentation | Image analysis<br/>Transformers | Satellite imagery<br/>Earth observation | End-to-end ML pipelines<br/>Edge deployment |
-
----
-
-## 📊 GitHub Stats
-
-<div align="center">
-
-<img height="170" src="https://github-readme-stats.vercel.app/api?username=BhuvaneshWadhwani&show_icons=true&theme=tokyonight&hide_border=true&bg_color=02050a" alt="GitHub stats" />
-<img height="170" src="https://github-readme-stats.vercel.app/api/top-langs/?username=BhuvaneshWadhwani&layout=compact&theme=tokyonight&hide_border=true&bg_color=02050a" alt="Top languages" />
-
-</div>
+- 👁️ **Computer Vision**: object detection and image analysis
+- 🧠 **Machine & Deep Learning**: applying AI to complex real-world data
+- 🛰️ **Geospatial & Remote Sensing**: satellite imagery and earth-observation applications
+- 🌦️ **Meteorological Data**: new methods for processing weather data
+- ⚙️ **Applied AI**: following and experimenting with broader developments
 
 ---
 
@@ -88,58 +71,3 @@ I work across the whole ML pipeline: data preparation, model development, evalua
 <sub>🌌 *"The Earth is the cradle of humanity, but one cannot live in a cradle forever."* · Tsiolkovsky</sub>
 
 </div>
-
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&height=120&color=0:0f3a52,100:02050a&section=footer" alt="Footer" />
-
-<!--
-# Hi, I'm Bhuvanesh 👋
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&pause=1200&color=36BCF7&width=650&height=40&lines=Computer+Vision+%26+Deep+Learning;Object+Detection+%26+Image+Analysis;Applied+AI+%26+Machine+Learning)](https://git.io/typing-svg)
-
-
-I'm an M.Sc. Social and Economic Data Science student at the University of Konstanz, Germany, interested in building practical machine learning systems.
-
-My primary interests lie in **Computer Vision, Deep Learning, and Applied AI**, particularly object detection, image analysis, and satellite imagery. I enjoy working across the ML pipeline, from data preparation and model development to evaluation and deployment.
-
-## Areas of Interest
-
-- Computer Vision & Object Detection
-- Deep Learning & Image Analysis
-- Satellite Imagery & Remote Sensing
-- Machine Learning & Applied AI
-
-## Tech Stack
-
-**Programming:** Python, R, SQL
-
-**Machine Learning & Computer Vision:** PyTorch, scikit-learn, Transformers, OpenCV, Object Detection, Image Segmentation
-
-**Generative AI:** Hugging Face, RAG, FAISS, CLIP
-
-
-<p align="left">
-  <img src="https://cdn.simpleicons.org/python" height="35" alt="Python" />
-  <img src="https://cdn.simpleicons.org/r" height="35" alt="R" />
-  <img src="https://cdn.simpleicons.org/pytorch" height="35" alt="PyTorch" />
-  <img src="https://cdn.simpleicons.org/scikitlearn" height="35" alt="scikit-learn" />
-  <img src="https://cdn.simpleicons.org/opencv" height="35" alt="OpenCV" />
-  <img src="https://cdn.simpleicons.org/huggingface" height="35" alt="Hugging Face" />
-  <img src="https://cdn.simpleicons.org/git" height="35" alt="Git" />
-  <img src="https://cdn.simpleicons.org/linux" height="35" alt="Linux" />
-</p>
-
-
-
-<!--
-**BhuvaneshWadhwani/BhuvaneshWadhwani** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-
-Here are some ideas to get you started:
-
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
