@@ -75,4 +75,6 @@ My technical interests span Machine Learning, Deep Learning, and Computer Vision
 </div>
 
 
-![GitHub contribution grid snake animation](https://raw.githubusercontent.com/BhuvaneshWadhwani/BhuvaneshWadhwani/output/github-contribution-grid-snake.svg)
+<div align="center">
+  <img src="https://raw.githubusercontent.com/BhuvaneshWadhwani/BhuvaneshWadhwani/output/github-contribution-grid-snake.svg" alt="GitHub contribution snake animation" width="100%" />
+</div>
