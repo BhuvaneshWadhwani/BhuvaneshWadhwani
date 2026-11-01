@@ -1,4 +1,6 @@
-<h1 align="center">Hi, I'm Bhuvanesh 👋</h1>
+<div align="center">
+  <img src="./assets/title.svg" width="100%" alt="Hi, I'm Bhuvanesh" />
+</div>
 
 <div align="center">
 
