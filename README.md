@@ -22,6 +22,19 @@ My primary interests lie in **Computer Vision, Deep Learning, and Applied AI**, 
 **Generative AI:** Hugging Face, RAG, FAISS, CLIP
 
 
+<p align="left">
+  <img src="https://cdn.simpleicons.org/python" height="35" alt="Python" />
+  <img src="https://cdn.simpleicons.org/r" height="35" alt="R" />
+  <img src="https://cdn.simpleicons.org/pytorch" height="35" alt="PyTorch" />
+  <img src="https://cdn.simpleicons.org/scikitlearn" height="35" alt="scikit-learn" />
+  <img src="https://cdn.simpleicons.org/opencv" height="35" alt="OpenCV" />
+  <img src="https://cdn.simpleicons.org/huggingface" height="35" alt="Hugging Face" />
+  <img src="https://cdn.simpleicons.org/git" height="35" alt="Git" />
+  <img src="https://cdn.simpleicons.org/linux" height="35" alt="Linux" />
+</p>
+
+
+
 <!--
 **BhuvaneshWadhwani/BhuvaneshWadhwani** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
