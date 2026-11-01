@@ -73,3 +73,6 @@ My technical interests span Machine Learning, Deep Learning, and Computer Vision
 <sub>🌌 *"The Earth is the cradle of humanity, but one cannot live in a cradle forever."* · Tsiolkovsky</sub>
 
 </div>
+
+
+![Snake animation](https://github.com/BhuvaneshWadhwani/BhuvaneshWadhwani/blob/output/github-contribution-grid-snake.svg)
