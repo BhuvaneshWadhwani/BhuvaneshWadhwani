@@ -1,4 +1,6 @@
 # Hi, I'm Bhuvanesh 👋
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&pause=1200&color=36BCF7&width=650&height=40&lines=Computer+Vision+%26+Deep+Learning;Object+Detection+%26+Image+Analysis;Applied+AI+%26+Machine+Learning)](https://git.io/typing-svg)
+
 
 I'm an M.Sc. Social and Economic Data Science student at the University of Konstanz, Germany, interested in building practical machine learning systems.
 
