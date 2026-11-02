@@ -12,7 +12,7 @@ from . import rocket, scene
 from .calendar import KERB_FRONT, KERB_FRONT_DK, KERB_HL, KERB_SHADE, KERB_TOP
 from .pixels import Canvas, hash01, hexc, mix, noise2
 from .sprites import draw_text, grass_tuft, text_width, title_bits
-from .svgkit import PIXEL_STYLE, animated, cycle, discrete, img
+from .svgkit import PIXEL_STYLE, animated, cycle, discrete, img, linear
 
 W = scene.W
 P = scene.P
@@ -214,14 +214,6 @@ def _keys(*seconds: float) -> list[float]:
     return [s / LOOP for s in seconds]
 
 
-def _linear(attr: str, values, keys, dur: float, kind: str = "") -> str:
-    tag = "animateTransform" if kind else "animate"
-    type_ = f' type="{kind}"' if kind else ""
-    return (f'<{tag} attributeName="{attr}"{type_} values="{";".join(values)}" '
-            f'keyTimes="{";".join(f"{k:.4f}" for k in keys)}" dur="{dur}s" '
-            f'repeatCount="indefinite"/>')
-
-
 def rocket_svg() -> str:
     c = Canvas(W, ROCKET_H, fill=(0, 0, 0))
     scene.sky(c, horizon=ROCKET_H, span=150, moon=MOON, star_rows=(3, 96))
@@ -246,7 +238,7 @@ def rocket_svg() -> str:
                                   f' opacity="{1 if i == 0 else 0}"'),
                               discrete("opacity", vals, _keys(0, 1, 2, 3, 5.5), LOOP)))
 
-    lift = _linear("transform",
+    lift = linear("transform",
                    ["0 0", "0 0", "1 0", "0 0", "1 0", "0 0", "0 -3", "0 -14", "0 -40", "0 -90",
                     "0 -160", "0 -160"],
                    _keys(0, 2.6, 2.7, 2.8, 2.9, 3.0, 3.4, 4.0, 4.7, 5.4, 6.3, 9), LOOP, "translate")
@@ -254,7 +246,7 @@ def rocket_svg() -> str:
              f'{cycle(flames, 0.3, nozzle_x - 3, nozzle_y - 1)}</g>')
     glow = _glow(120, 44, hexc("#ffb45e"), 70)
     glow_el = animated(img(glow, nozzle_x - 60, nozzle_y - 31, ' opacity="0"'),
-                       _linear("opacity", ["0", "0", "1", ".7", "0", "0"],
+                       linear("opacity", ["0", "0", "1", ".7", "0", "0"],
                                _keys(0, 2.8, 3.3, 4.6, 6.0, 9), LOOP))
     puffs = []
     for side, seed in ((-1, 241), (1, 242)):
@@ -262,8 +254,8 @@ def rocket_svg() -> str:
         x0 = nozzle_x - 9 + side * 8
         puffs.append(
             '<g opacity="0">'
-            + _linear("opacity", ["0", "0", ".95", ".55", "0", "0"], _keys(0, 3.0, 3.6, 5.2, 7.0, 9), LOOP)
-            + _linear("transform", ["0 0", "0 0", f"{side * 8} -1", f"{side * 20} -4", f"{side * 26} -6",
+            + linear("opacity", ["0", "0", ".95", ".55", "0", "0"], _keys(0, 3.0, 3.6, 5.2, 7.0, 9), LOOP)
+            + linear("transform", ["0 0", "0 0", f"{side * 8} -1", f"{side * 20} -4", f"{side * 26} -6",
                                     f"{side * 26} -6"], _keys(0, 3.0, 3.8, 5.2, 7.0, 9), LOOP, "translate")
             + img(s, x0, nozzle_y - 6) + "</g>")
 
@@ -272,7 +264,7 @@ def rocket_svg() -> str:
         s = rocket.as_canvas(art)
         end = W + 20 if start < 0 else -20
         sats.append(
-            f'<g>{_linear("transform", [f"{start} {y}", f"{end} {y - 6}"], [0, 1], dur, "translate")}'
+            f'<g>{linear("transform", [f"{start} {y}", f"{end} {y - 6}"], [0, 1], dur, "translate")}'
             f'{img(s)}'
             + animated(f'<rect x="{s.w // 2}" y="-1" width="1" height="1" fill="#b8483a" opacity="0"/>',
                        discrete("opacity", (0, 1, 0), (0, .5, .62), 1.6))

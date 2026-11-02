@@ -10,12 +10,12 @@ from __future__ import annotations
 from datetime import date
 from html import escape
 
-from . import cat, scene
+from . import cat, rocket, scene
 from .calendar import (STONE_W, TOP_H, FRONT_H, arrange, draw_courtyard,
                        draw_day_labels, draw_legend, make_layout)
 from .pixels import Canvas, hash01, hexc
 from .sprites import draw_text, text_width
-from .svgkit import PIXEL_STYLE, cycle, img
+from .svgkit import PIXEL_STYLE, animated, cycle, discrete, img, linear
 
 W, H, SCALE = scene.W, scene.H, 2.5
 TEXT, TEXT_DIM, TEXT_SHADOW = hexc("#c6cbb2"), hexc("#86927f"), hexc("#050806")
@@ -35,6 +35,7 @@ def paint(days: list[dict], total: int):
 
     scene.sky(base)
     scene.moon(base)
+    sky_only = [row[:] for row in base.px]      # what shows through gaps in the trees
     scene.far_forest(base)
     scene.mist(base, 58, 98, 0.6, 1)
     scene.tower(base)
@@ -61,7 +62,7 @@ def paint(days: list[dict], total: int):
               TEXT_DIM, shadow=TEXT_SHADOW)
     legend_w = text_width("LESS") + 4 + 5 * (STONE_W + 3) + 2 + text_width("MORE")
     draw_legend(base, lay.right - legend_w, ty + 3, TEXT_DIM, TEXT_SHADOW)
-    return base, occluder, tiles, lay
+    return base, occluder, tiles, lay, sky_only
 
 
 def _state(index: int, body: str) -> str:
@@ -102,6 +103,51 @@ def cat_layer() -> str:
             f'{img(shadow, 3, cat.H - 2)}{"".join(states)}</g>')
 
 
+# Distant launch (seconds): ignition flare, climb, trail lingers and fades.
+LAUNCH = 36.0
+LAUNCH_X = 249          # an open column of sky between the treetops
+LAUNCH_Y = 74           # rocket top when it starts, hidden behind the far treeline
+HORIZON = 92            # nothing from the launch is drawn below this row
+
+
+def launch_layer(base: Canvas, sky_only: list) -> str:
+    """A far-off rocket rising beyond the forest, echoing the header.
+
+    Everything painted in front of the sky near the launch column is copied
+    into a cut-out drawn over the rocket, so it climbs *behind* the treeline
+    and the mid-forest and disappears into the canopy.
+    """
+    x0, x1 = LAUNCH_X - 15, LAUNCH_X + 15
+    cut = Canvas(x1 - x0 + 1, HORIZON + 1)
+    for y in range(HORIZON + 1):
+        for x in range(x0, x1 + 1):
+            if base.px[y][x] != sky_only[y][x]:
+                cut.put(x - x0, y, base.px[y][x])
+
+    keys = lambda *s: [v / LAUNCH for v in s]
+    ship = rocket.as_canvas(rocket.DISTANT)
+    flames = [rocket.as_canvas(f) for f in rocket.DISTANT_FLAMES]
+    trail = scene.rocket_trail()
+    rx = LAUNCH_X - ship.w // 2
+
+    climb = linear("transform", [f"0 {LAUNCH_Y - d}" for d in (0, 0, 6, 20, 45, 84, 84)],
+                   keys(0, 1.5, 3.5, 5.5, 7.5, 10, 36), LAUNCH, "translate")
+    craft = ('<g opacity="0">' + discrete("opacity", (0, 1, 0), keys(0, 1.5, 10.5), LAUNCH)
+             + img(ship, rx, 0) + cycle(flames, 0.2, rx, ship.h) + "</g>")
+    smoke = ('<g opacity="0">'
+             + linear("opacity", ["0", "0", "1", "1", "0", "0"], keys(0, 1.5, 2.2, 11, 22, 36), LAUNCH)
+             + '<g>' + linear("transform", ["0 0", "0 0", "4 0", "4 0"], keys(0, 10, 22, 36), LAUNCH,
+                               "translate")
+             + img(trail, LAUNCH_X - trail.w // 2, ship.h + 1) + "</g></g>")
+    glow = scene.ignition_glow()
+    flare = animated(img(glow, LAUNCH_X - glow.w // 2, LAUNCH_Y - 10, ' opacity="0"'),
+                     linear("opacity", ["0", "0", ".5", "1", ".6", "1", ".3", "0", "0"],
+                            keys(0, .2, .6, 1.0, 1.3, 1.7, 3.5, 5.5, 36), LAUNCH))
+    return (f'<clipPath id="sky"><rect x="{x0}" y="0" width="{cut.w}" height="{HORIZON + 1}"/></clipPath>'
+            f'<g clip-path="url(#sky)"><g>{climb}{smoke}{craft}</g></g>'
+            f'{img(cut, x0, 0)}{flare}')
+
+
 def fireflies() -> str:
     spots = [(118, 62), (196, 84), (250, 70), (338, 92), (430, 78), (88, 96),
              (14, 140), (466, 150), (150, 196), (342, 194), (406, 206), (58, 208)]
@@ -133,7 +179,7 @@ def tooltips(tiles: list[dict]) -> str:
 
 
 def build_svg(days: list[dict], total: int) -> str:
-    base, occluder, tiles, lay = paint(days, total)
+    base, occluder, tiles, lay, sky_only = paint(days, total)
     mist = scene.mist_overlay(W + 40)
     title = f"Dark fantasy pixel-art forest: {total:,} GitHub contributions in the last year"
     return "".join([
@@ -146,6 +192,7 @@ def build_svg(days: list[dict], total: int) -> str:
         'contributions. An orange cat explorer with a cloak, pack and lantern walks the path.</desc>',
         PIXEL_STYLE,
         img(base),
+        launch_layer(base, sky_only),
         f'<g opacity=".9">{img(mist, -20, 92)}<animateTransform attributeName="transform" '
         'type="translate" values="0 0;14 0;0 0" dur="40s" repeatCount="indefinite"/></g>',
         cat_layer(),

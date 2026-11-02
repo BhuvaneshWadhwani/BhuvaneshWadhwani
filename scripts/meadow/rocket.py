@@ -5,7 +5,7 @@ upper right (the moon), with a dark selective outline baked into the art.
 """
 from __future__ import annotations
 
-from .pixels import Canvas, hexc, sprite
+from .pixels import Canvas, hexc, mix, sprite
 
 PAL = {
     "K": hexc("#120e0c"),  # outline
@@ -94,6 +94,33 @@ PROBE = sprite("""
 KKGKK
 .PpP.
 """, PAL)
+
+
+def _hazed(art, amount: float = 0.35):
+    """Push a sprite toward the night sky so it reads as far away."""
+    sky = hexc("#111a25")
+    return [[None if p is None else mix(p, sky, amount) for p in row] for row in art]
+
+
+# The same rocket seen from the meadow, far beyond the treeline.
+DISTANT = _hazed(sprite("""
+.R.
+SBL
+SBL
+rRR
+SBL
+r.R
+""", PAL))
+
+DISTANT_FLAMES = [_hazed(sprite(art, PAL), 0.15) for art in ("""
+.y.
+.Y.
+.o.
+""", """
+.y.
+OYO
+...
+""")]
 
 
 def as_canvas(art) -> Canvas:

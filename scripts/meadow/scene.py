@@ -691,6 +691,37 @@ def cat_shadow() -> Canvas:
     return s
 
 
+def rocket_trail(length: int = 80) -> Canvas:
+    """Exhaust smoke of the distant rocket: thin under the rocket, older smoke
+    lower down has spread wider and drifted."""
+    t = Canvas(11, length)
+    lit, mid, shade = hexc("#c4ccce"), hexc("#9ba6ad"), hexc("#76818b")
+    for y in range(length):
+        age = y / (length - 1)
+        half = 0.8 + age * 3.6 + noise1(y * 0.25, 303) * age * 1.5    # billows as it ages
+        centre = 5 + (noise1(y * 0.1, 301) - 0.5) * 4 * age
+        for x in range(t.w):
+            d = abs(x + 0.5 - centre - 0.5) / half
+            if d < 1 - hash01(x, y, 302) * 0.4:
+                side = x + 0.5 - centre                            # moonlight from the right
+                colour = lit if side > half * 0.3 else mid if side > -half * 0.3 else shade
+                t.put(x, y, (*colour, int(170 - 70 * age - 50 * d)))
+    return t
+
+
+def ignition_glow() -> Canvas:
+    """A small warm flare lighting the far treeline at the launch site."""
+    g = Canvas(15, 7)
+    for y in range(g.h):
+        for x in range(g.w):
+            d = math.hypot((x - 7) / 7.5, (y - 6) / 4.5) + (bayer(x, y) - 0.5) * 0.08
+            for limit, alpha in ((0.4, 120), (0.7, 70), (1.0, 35)):
+                if d < limit:
+                    g.put(x, y, (255, 186, 102, alpha))
+                    break
+    return g
+
+
 def mist_overlay(width: int) -> Canvas:
     m = Canvas(width, 22)
     for y in range(m.h):

@@ -26,6 +26,14 @@ def discrete(attr: str, values, keys, dur: float, extra: str = "") -> str:
             f'dur="{dur}s" repeatCount="indefinite"{extra}/>')
 
 
+def linear(attr: str, values, keys, dur: float, kind: str = "") -> str:
+    tag = "animateTransform" if kind else "animate"
+    type_ = f' type="{kind}"' if kind else ""
+    return (f'<{tag} attributeName="{attr}"{type_} values="{";".join(values)}" '
+            f'keyTimes="{";".join(f"{k:.4f}" for k in keys)}" dur="{dur}s" '
+            f'repeatCount="indefinite"/>')
+
+
 def cycle(frames: list[Canvas], dur: float, dx: int = 0, dy: int = 0) -> str:
     """Flip-book: show each frame in turn, the first one when SMIL is off."""
     n = len(frames)
