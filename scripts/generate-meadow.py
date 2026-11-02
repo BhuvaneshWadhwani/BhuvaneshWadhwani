@@ -1,575 +1,376 @@
+#!/usr/bin/env python3
+"""Generate a dark-fantasy, high-detail pixel-art GitHub contribution meadow.
+
+Required environment:
+  GITHUB_TOKEN: token with permission to read the user's public contribution data.
+
+The script writes dist/contribution-meadow.svg.
+"""
+from __future__ import annotations
 
 import json
 import os
 import random
+import sys
+import urllib.error
 import urllib.request
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+from html import escape
 from pathlib import Path
-from xml.sax.saxutils import escape
-
-# ============================================================
-# CONFIGURATION
-# ============================================================
 
 USERNAME = "BhuvaneshWadhwani"
-TOKEN = os.environ["GITHUB_TOKEN"]
-
 OUTPUT = Path("dist/contribution-meadow.svg")
-
-WIDTH = 1160
-HEIGHT = 390
-
-CELL = 14
+API_URL = "https://api.github.com/graphql"
+WIDTH, HEIGHT = 1200, 470
+CELL = 15
 GAP = 4
 STEP = CELL + GAP
+GRID_X = 112
+GRID_Y = 190
+RNG = random.Random(29)
 
-X_START = 105
-Y_START = 165
+LEVEL_COLOURS = {
+    0: ("#17231f", "#26352d", "#34483a"),
+    1: ("#29452f", "#42683a", "#648449"),
+    2: ("#426b39", "#6e9345", "#9db75a"),
+    3: ("#709847", "#a7bd58", "#d0d77a"),
+    4: ("#b1c968", "#e2e39a", "#fff0bd"),
+}
+LEVEL_NAMES = {
+    0: "No contributions",
+    1: "Low contributions",
+    2: "Medium contributions",
+    3: "High contributions",
+    4: "Very high contributions",
+}
 
-GRASS = [
-    "#172D27",  # No contributions
-    "#28523A",  # Low
-    "#397747",  # Moderate
-    "#609C49",  # High
-    "#A8CF58",  # Very high
-]
 
-random.seed(42)
+def github_contributions() -> dict:
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise RuntimeError("GITHUB_TOKEN environment variable is missing.")
 
-# ============================================================
-# 1. FETCH REAL GITHUB CONTRIBUTION DATA
-# ============================================================
-
-today = date.today()
-start_date = today - timedelta(days=364)
-
-query = """
-query($login: String!, $from: DateTime!, $to: DateTime!) {
-  user(login: $login) {
-    contributionsCollection(from: $from, to: $to) {
-      contributionCalendar {
-        totalContributions
-        weeks {
-          contributionDays {
-            date
-            contributionCount
-            contributionLevel
+    today = date.today()
+    start = today - timedelta(days=364)
+    query = """
+    query($login: String!, $from: DateTime!, $to: DateTime!) {
+      user(login: $login) {
+        contributionsCollection(from: $from, to: $to) {
+          contributionCalendar {
+            totalContributions
+            weeks {
+              contributionDays {
+                date
+                contributionCount
+                contributionLevel
+              }
+            }
           }
         }
       }
     }
-  }
-}
-"""
+    """
+    payload = {
+        "query": query,
+        "variables": {
+            "login": USERNAME,
+            "from": datetime.combine(start, datetime.min.time(), timezone.utc).isoformat(),
+            "to": datetime.combine(today, datetime.max.time(), timezone.utc).isoformat(),
+        },
+    }
+    request = urllib.request.Request(
+        API_URL,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "contribution-meadow-generator",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"GitHub API returned HTTP {exc.code}: {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Could not reach GitHub GraphQL API: {exc}") from exc
 
-payload = {
-    "query": query,
-    "variables": {
-        "login": USERNAME,
-        "from": start_date.isoformat() + "T00:00:00Z",
-        "to": today.isoformat() + "T23:59:59Z",
-    },
-}
+    if result.get("errors"):
+        raise RuntimeError("GitHub GraphQL error: " + json.dumps(result["errors"]))
+    user = result.get("data", {}).get("user")
+    if not user:
+        raise RuntimeError(f"GitHub user {USERNAME!r} was not found or is inaccessible.")
 
-request = urllib.request.Request(
-    "https://api.github.com/graphql",
-    data=json.dumps(payload).encode("utf-8"),
-    headers={
-        "Authorization": f"Bearer {TOKEN}",
-        "Content-Type": "application/json",
-        "User-Agent": "GitHub-Contribution-Meadow",
-    },
-)
-
-with urllib.request.urlopen(request, timeout=30) as response:
-    result = json.loads(response.read().decode("utf-8"))
-
-if result.get("errors"):
-    raise RuntimeError(f"GitHub API error: {result['errors']}")
-
-user = result.get("data", {}).get("user")
-
-if not user:
-    raise RuntimeError(f"GitHub user not found: {USERNAME}")
-
-calendar = user["contributionsCollection"]["contributionCalendar"]
-weeks = calendar["weeks"]
-
-if not weeks:
-    raise RuntimeError("GitHub returned an empty contribution calendar.")
-
-total_contributions = calendar["totalContributions"]
-
-print(f"Retrieved {total_contributions} contributions.")
-print(f"Retrieved {len(weeks)} calendar weeks.")
-
-# ============================================================
-# 2. SVG HELPERS
-# ============================================================
-
-svg = []
-
-
-def add(value):
-    svg.append(value)
+    calendar = user["contributionsCollection"]["contributionCalendar"]
+    days = []
+    for week in calendar["weeks"]:
+        for item in week["contributionDays"]:
+            level_name = item["contributionLevel"]
+            level = {
+                "NONE": 0,
+                "FIRST_QUARTILE": 1,
+                "SECOND_QUARTILE": 2,
+                "THIRD_QUARTILE": 3,
+                "FOURTH_QUARTILE": 4,
+            }.get(level_name, 0)
+            days.append({
+                "date": item["date"],
+                "count": int(item["contributionCount"]),
+                "level": level,
+            })
+    return {"days": days, "total": int(calendar["totalContributions"])}
 
 
-def rect(x, y, w, h, fill, radius=0, extra=""):
-    add(
-        f'<rect x="{x}" y="{y}" width="{w}" height="{h}" '
-        f'rx="{radius}" fill="{fill}" {extra}/>'
+def rect(x, y, w, h, fill, extra=""):
+    return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{fill}" {extra}/>'
+
+
+def pixel(x, y, colour, size=3):
+    return rect(x, y, size, size, colour)
+
+
+def text(x, y, value, size=11, fill="#aeb9a4", extra=""):
+    return (
+        f'<text x="{x}" y="{y}" font-family="monospace" font-size="{size}" '
+        f'fill="{fill}" {extra}>{escape(str(value))}</text>'
     )
 
 
-def text_element(x, y, content, size=12, colour="#C4D5C3",
-                 extra=""):
-    add(
-        f'<text x="{x}" y="{y}" font-family="monospace" '
-        f'font-size="{size}" fill="{colour}" {extra}>'
-        f'{escape(str(content))}</text>'
-    )
+def draw_tree(x, ground, scale=1.0, tint="#101b19", highlight="#24382d"):
+    """Small blocky fir tree built from pixel-like rectangles."""
+    s = scale
+    out = [rect(x + 7*s, ground - 13*s, 5*s, 14*s, "#302a24")]
+    for row, half in enumerate((3, 5, 7, 9)):
+        yy = ground - (18 + row*7)*s
+        xx = x + (12-half)*s
+        out.append(rect(xx, yy, half*2*s, 6*s, tint))
+        out.append(rect(xx + 2*s, yy + 2*s, max(2, half-1)*s, 2*s, highlight))
+    out.append(pixel(x + 4*s, ground - 29*s, "#344a35", 2*s))
+    return "".join(out)
 
 
-# ============================================================
-# 3. BACKGROUND AND SVG DEFINITIONS
-# ============================================================
+def draw_cat(x, y):
+    """Pixel sprite: orange explorer cat with a tiny satchel and scarf."""
+    p = []
+    # Tail, animated separately.
+    p.append('<g class="tail" transform-origin="8px 34px">')
+    p += [rect(0, 30, 4, 4, "#d77b32"), rect(-3, 26, 4, 4, "#e99a45"),
+          rect(-3, 22, 4, 4, "#f0b45f"), rect(-7, 20, 4, 4, "#d77b32")]
+    p.append('</g>')
+    # Body and legs.
+    p += [rect(10, 25, 29, 14, "#d77b32"), rect(14, 28, 20, 8, "#f0a34d"),
+          rect(12, 37, 7, 8, "#c96b2b"), rect(31, 37, 7, 8, "#c96b2b"),
+          rect(11, 43, 9, 3, "#eaa04b"), rect(30, 43, 9, 3, "#eaa04b")]
+    # Head, ears and face.
+    p += [rect(31, 8, 20, 19, "#e58b38"), rect(32, 4, 7, 8, "#e58b38"),
+          rect(44, 4, 7, 8, "#e58b38"), rect(34, 7, 3, 4, "#f3b4a0"),
+          rect(46, 7, 3, 4, "#f3b4a0"), rect(34, 15, 4, 4, "#f3e6bd"),
+          rect(45, 15, 4, 4, "#f3e6bd"), rect(35, 16, 2, 3, "#17211d"),
+          rect(46, 16, 2, 3, "#17211d"), rect(40, 21, 4, 2, "#70402c")]
+    # Stripes, chest, scarf, satchel.
+    p += [rect(17, 26, 4, 3, "#8f4b2b"), rect(25, 25, 4, 3, "#8f4b2b"),
+          rect(39, 11, 3, 3, "#9c542e"), rect(37, 27, 10, 4, "#d6c17e"),
+          rect(45, 28, 4, 8, "#c7ad68"), rect(9, 29, 6, 8, "#8a5839"),
+          rect(8, 30, 7, 2, "#d8bd7a")]
+    # Backpack strap and small lantern.
+    p += [rect(20, 24, 3, 12, "#6b4934"), rect(23, 31, 4, 5, "#c3a66b"),
+          rect(24, 32, 2, 3, "#ffe49a")]
+    return f'<g transform="translate({x} {y})">' + "".join(p) + '</g>'
 
-add(f'''<svg xmlns="http://www.w3.org/2000/svg"
-     width="{WIDTH}" height="{HEIGHT}"
-     viewBox="0 0 {WIDTH} {HEIGHT}">
 
-<defs>
+def make_svg(data):
+    days = data["days"]
+    # Pad to complete Sunday-to-Saturday columns as GitHub's calendar does.
+    if not days:
+        raise RuntimeError("GitHub returned an empty contribution calendar.")
+    first_weekday = date.fromisoformat(days[0]["date"]).weekday()
+    # GitHub's calendar starts Sunday; Python Monday=0.
+    leading = (first_weekday + 1) % 7
+    cells = [None] * leading + days
+    while len(cells) % 7:
+        cells.append(None)
+    weeks = len(cells) // 7
 
-  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="#071321"/>
-    <stop offset="65%" stop-color="#102C35"/>
-    <stop offset="100%" stop-color="#173C36"/>
-  </linearGradient>
+    out = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" viewBox="0 0 {WIDTH} {HEIGHT}">',
+        '<title>Dark fantasy pixel-art GitHub contribution meadow</title>',
+        '<desc>A moonlit forest ruin with a glowing contribution calendar and an orange explorer cat.</desc>',
+        '<defs>',
+        '<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#080e18"/><stop offset=".62" stop-color="#111d25"/><stop offset="1" stop-color="#1c2b27"/></linearGradient>',
+        '<linearGradient id="mist" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#9bb89a" stop-opacity="0"/><stop offset=".5" stop-color="#9bb89a" stop-opacity=".16"/><stop offset="1" stop-color="#9bb89a" stop-opacity="0"/></linearGradient>',
+        '<radialGradient id="moonGlow"><stop offset="0" stop-color="#dce7bd" stop-opacity=".25"/><stop offset="1" stop-color="#dce7bd" stop-opacity="0"/></radialGradient>',
+        '<filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4"/></filter>',
+        '<filter id="tileGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2"/></filter>',
+        '</defs>',
+        rect(0, 0, WIDTH, HEIGHT, "url(#sky)"),
+        # Moon and distant atmosphere.
+        '<circle cx="1000" cy="76" r="75" fill="url(#moonGlow)"/>',
+        '<circle cx="1000" cy="76" r="27" fill="#d7dfbd" opacity=".82"/>',
+        '<circle cx="1010" cy="67" r="25" fill="#111d25"/>',
+    ]
 
-  <linearGradient id="pond" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="#17434A"/>
-    <stop offset="100%" stop-color="#091C2A"/>
-  </linearGradient>
+    # Stars: restrained, crisp pixels rather than scattered stock-art sparkles.
+    for i in range(95):
+        x = RNG.randint(20, WIDTH - 20)
+        y = RNG.randint(15, 150)
+        s = RNG.choice([1, 2, 2, 3])
+        c = RNG.choice(["#839a8a", "#b7c59a", "#607c79"])
+        out.append(rect(x, y, s, s, c, f'opacity="{RNG.uniform(.25,.75):.2f}"'))
 
-  <linearGradient id="moonlight" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="#D8E7B6" stop-opacity="0.14"/>
-    <stop offset="100%" stop-color="#D8E7B6" stop-opacity="0"/>
-  </linearGradient>
+    # Distant mountain / forest silhouettes.
+    out.append('<path d="M0 165 L95 118 L165 151 L250 105 L335 157 L420 116 L505 158 L610 110 L700 160 L805 116 L900 156 L1000 112 L1100 159 L1200 120 L1200 280 L0 280Z" fill="#14231f"/>')
+    out.append('<path d="M0 188 L120 148 L215 183 L330 140 L440 185 L560 145 L680 188 L790 151 L910 185 L1030 146 L1140 181 L1200 162 L1200 300 L0 300Z" fill="#1a2d25"/>')
+    out.append(rect(0, 168, WIDTH, 34, "url(#mist)"))
+    # Ancient broken tower silhouette.
+    out.append('<path d="M870 185 L870 131 L880 131 L880 119 L890 119 L890 131 L900 131 L900 185Z" fill="#101a1c"/>')
+    out.append('<path d="M866 132 L885 113 L904 132Z" fill="#101a1c"/>')
+    out.append(rect(883, 146, 4, 9, "#a8b68a", 'opacity=".45"'))
 
-  <filter id="softGlow">
-    <feGaussianBlur stdDeviation="3"/>
-  </filter>
+    # Forest wall.
+    for x in range(-20, WIDTH + 20, 54):
+        out.append(draw_tree(x, 246 + RNG.randint(-5, 8), RNG.choice([1.0, 1.15, 1.3]),
+                             RNG.choice(["#0e1918", "#12201c", "#17271e"]),
+                             RNG.choice(["#20372a", "#29402d", "#304932"])))
 
-</defs>
+    # Calendar frame: dark carved-stone panel.
+    grid_width = weeks * STEP - GAP
+    panel_x, panel_y = 87, 157
+    panel_w, panel_h = grid_width + 58, 190
+    out.append(rect(panel_x, panel_y, panel_w, panel_h, "#0b1516", 'rx="5" stroke="#52634a" stroke-width="2"'))
+    out.append(rect(panel_x + 5, panel_y + 5, panel_w - 10, panel_h - 10, "#101d1b", 'rx="3" stroke="#263d30" stroke-width="1"'))
+    # Tiny stone rivets.
+    for xx in (panel_x + 10, panel_x + panel_w - 14):
+        for yy in (panel_y + 10, panel_y + panel_h - 14):
+            out.append(rect(xx, yy, 4, 4, "#718064"))
 
-<rect width="{WIDTH}" height="{HEIGHT}" fill="url(#sky)"/>
-''')
+    # Heading.
+    out.append(text(30, 35, "THE CHRONICLES OF", 10, "#91a18b", 'letter-spacing="3"'))
+    out.append(text(30, 61, "A YEAR IN THE WILDS", 21, "#d7dfc0", 'font-weight="bold" letter-spacing="1"'))
+    out.append(text(30, 82, "A record of work, patience and small victories", 10, "#829184"))
+    out.append(text(30, 111, "CONTRIBUTION FIELD", 9, "#a9b894", 'letter-spacing="2"'))
 
-# ============================================================
-# 4. STARS AND MOON
-# ============================================================
+    # Month labels from actual dates.
+    month_positions = {}
+    for index, item in enumerate(cells):
+        if item and date.fromisoformat(item["date"]).day <= 7:
+            col = index // 7
+            month_positions.setdefault(date.fromisoformat(item["date"]).strftime("%b").upper(), col)
+    for month, col in month_positions.items():
+        out.append(text(GRID_X + col * STEP, 178, month, 8, "#94a28b"))
 
-for _ in range(65):
-    x = random.randint(10, WIDTH - 10)
-    y = random.randint(10, 115)
-    size = random.choice([1, 1, 2, 3])
+    # Weekday labels.
+    for row, label in enumerate(("S", "", "T", "", "T", "", "S")):
+        if label:
+            out.append(text(97, GRID_Y + row * STEP + 10, label, 8, "#748678"))
 
-    colour = random.choice(["#E7EBCB", "#A9C9C0", "#F5DDA2"])
-
-    rect(x, y, size, size, colour, extra='opacity="0.8"')
-
-# Moon glow
-add('<circle cx="1035" cy="65" r="48" fill="#DCE6B5" opacity="0.08" filter="url(#softGlow)"/>')
-
-# Pixel-style crescent moon
-add("""
-<g shape-rendering="crispEdges">
-  <circle cx="1035" cy="65" r="27" fill="#E8E6B8"/>
-  <circle cx="1048" cy="55" r="24" fill="#0A1D2B"/>
-  <rect x="1018" y="49" width="5" height="5" fill="#FFF4CC" opacity="0.6"/>
-  <rect x="1026" y="83" width="4" height="4" fill="#FFF4CC" opacity="0.5"/>
-</g>
-""")
-
-# ============================================================
-# 5. DISTANT MOUNTAINS AND FOREST
-# ============================================================
-
-add("""
-<!-- Distant mountains -->
-<path d="
-M0 150 L75 92 L135 130 L225 75 L305 132
-L390 95 L475 140 L575 80 L675 135
-L775 90 L865 135 L965 88 L1060 135
-L1160 85 L1160 225 L0 225 Z"
-fill="#122D37"/>
-
-<!-- Distant tree line -->
-<path d="
-M0 165 L35 115 L70 165 L105 110 L145 165
-L180 120 L215 165 L255 105 L295 165
-L335 125 L375 165 L415 112 L455 165
-L495 125 L535 165 L575 105 L615 165
-L655 120 L695 165 L735 108 L775 165
-L815 120 L855 165 L895 105 L935 165
-L975 125 L1015 165 L1055 110 L1095 165
-L1135 120 L1160 155 L1160 230 L0 230 Z"
-fill="#173E34"/>
-
-<!-- Moonlight -->
-<rect x="0" y="105" width="1160" height="115"
-      fill="url(#moonlight)"/>
-
-<!-- Main meadow -->
-<rect x="0" y="215" width="1160" height="175"
-      fill="#102C25"/>
-""")
-
-# Foreground forest trees at both edges
-add("""
-<g shape-rendering="crispEdges">
-
-  <!-- Left large tree -->
-  <rect x="24" y="83" width="17" height="174" fill="#533D2E"/>
-  <rect x="8" y="105" width="48" height="40" fill="#17482F"/>
-  <rect x="0" y="132" width="55" height="39" fill="#205C39"/>
-  <rect x="16" y="70" width="40" height="35" fill="#286A40"/>
-  <rect x="42" y="92" width="36" height="40" fill="#1B5435"/>
-  <rect x="8" y="114" width="9" height="8" fill="#60964A"/>
-  <rect x="42" y="80" width="8" height="7" fill="#78A84C"/>
-
-  <!-- Right large tree -->
-  <rect x="1110" y="85" width="17" height="172" fill="#533D2E"/>
-  <rect x="1082" y="105" width="60" height="40" fill="#17482F"/>
-  <rect x="1090" y="70" width="55" height="38" fill="#286A40"/>
-  <rect x="1072" y="132" width="65" height="39" fill="#205C39"/>
-  <rect x="1090" y="91" width="9" height="8" fill="#60964A"/>
-  <rect x="1120" y="78" width="8" height="7" fill="#78A84C"/>
-
-</g>
-""")
-
-# ============================================================
-# 6. MONTH AND WEEKDAY LABELS
-# ============================================================
-
-month_names = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-]
-
-day_names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-
-for i, name in enumerate(day_names):
-    if i % 2 == 0:
-        text_element(
-            47,
-            Y_START + i * STEP + 11,
-            name,
-            size=10,
-            colour="#A7C1A8",
+    # Contribution tiles: inset bevels, random moss speckle, level glow.
+    for index, item in enumerate(cells):
+        if item is None:
+            continue
+        col, row = divmod(index, 7)
+        x = GRID_X + col * STEP
+        y = GRID_Y + row * STEP
+        level = item["level"]
+        dark, mid, light = LEVEL_COLOURS[level]
+        if level:
+            out.append(rect(x - 2, y - 2, CELL + 4, CELL + 4, light,
+                            f'opacity="{0.12 + level*0.045:.2f}" rx="2" filter="url(#tileGlow)"'))
+        out.append(rect(x, y, CELL, CELL, dark, 'rx="1" stroke="#07100f" stroke-width="1"'))
+        out.append(rect(x + 2, y + 2, CELL - 4, 3, mid))
+        out.append(rect(x + 2, y + 5, 3, CELL - 7, mid, 'opacity=".72"'))
+        out.append(rect(x + 5, y + 5, CELL - 7, CELL - 7, dark))
+        # Tiny pixel highlights make each tile feel like textured moss/stone.
+        if level:
+            out.append(rect(x + 4, y + 5, 2, 2, light, 'opacity=".9"'))
+            out.append(rect(x + 9, y + 9, 2, 2, mid, 'opacity=".85"'))
+            if level >= 3:
+                out.append(rect(x + 11, y + 3, 2, 2, light))
+        else:
+            out.append(rect(x + 10, y + 10, 2, 2, "#405047", 'opacity=".5"'))
+        out.append(
+            f'<title>{escape(item["date"])}: {item["count"]} contributions ({LEVEL_NAMES[level]})</title>'
         )
 
-for week_index, week in enumerate(weeks):
-    for day in week["contributionDays"]:
-        day_date = date.fromisoformat(day["date"])
+    # Bottom border and legend.
+    legend_y = panel_y + panel_h - 17
+    out.append(text(panel_x + 12, legend_y + 7, f'{data["total"]} CONTRIBUTIONS', 8, "#b7c39e"))
+    out.append(text(panel_x + panel_w - 170, legend_y + 7, "LESS", 7, "#879587"))
+    for i in range(5):
+        dark, mid, light = LEVEL_COLOURS[i]
+        lx = panel_x + panel_w - 137 + i * 16
+        out.append(rect(lx, legend_y - 3, 11, 11, dark, 'stroke="#65765a" stroke-width=".6"'))
+        out.append(rect(lx + 2, legend_y - 1, 7, 3, mid))
+        if i:
+            out.append(rect(lx + 3, legend_y + 3, 2, 2, light))
+    out.append(text(panel_x + panel_w - 48, legend_y + 7, "MORE", 7, "#b7c39e"))
 
-        if day_date.day == 1:
-            x = X_START + week_index * STEP
+    # Foreground ground plane and path.
+    out.append('<path d="M0 354 Q180 326 340 352 T670 349 T960 345 T1200 355 L1200 470 L0 470Z" fill="#0a1412"/>')
+    out.append('<path d="M0 383 Q230 350 450 379 T900 375 T1200 390" fill="none" stroke="#263c2c" stroke-width="3"/>')
+    # Broken stepping-stone trail.
+    for i, (x, y) in enumerate([(500, 403), (555, 391), (612, 405), (674, 390), (733, 402), (792, 390)]):
+        out.append(rect(x, y, 24, 7, "#25332b", 'rx="2"'))
+        out.append(rect(x + 3, y + 1, 9, 2, "#435342"))
+    # Foreground trees framing the scene.
+    out.append(draw_tree(-3, 435, 2.2, "#08110f", "#1b3023"))
+    out.append(draw_tree(1090, 438, 2.5, "#08110f", "#1b3023"))
+    out.append(draw_tree(1150, 438, 1.7, "#0a1512", "#203626"))
 
-            text_element(
-                x,
-                153,
-                month_names[day_date.month - 1],
-                size=11,
-                colour="#C5D5B9",
-            )
-            break
+    # Grass tufts and tiny mushrooms, deliberately sparse.
+    for i in range(70):
+        x = RNG.randint(15, WIDTH - 15)
+        y = RNG.randint(355, 460)
+        c = RNG.choice(["#263f2c", "#365334", "#526a3b"])
+        out.append(rect(x, y, 2, RNG.randint(4, 10), c))
+        if i % 5 == 0:
+            out.append(rect(x + 2, y + 2, 3, 2, c))
+    for x, y in [(80, 405), (1030, 412), (930, 438), (300, 430)]:
+        out.append(rect(x, y + 5, 5, 7, "#d8d0ad"))
+        out.append(rect(x - 2, y + 2, 9, 4, "#8d5548"))
+        out.append(rect(x, y, 5, 3, "#b36b52"))
 
-# ============================================================
-# 7. CONTRIBUTION GRASS TILES
-# ============================================================
+    # Lantern posts and fireflies.
+    out.append(rect(64, 337, 4, 30, "#514532"))
+    out.append(rect(58, 331, 16, 9, "#6d6242", 'rx="2"'))
+    out.append(rect(62, 333, 8, 5, "#e6c77d", 'opacity=".8"'))
+    out.append('<circle cx="66" cy="337" r="22" fill="#d7b96c" opacity=".13" filter="url(#softGlow)"/>')
+    for i in range(12):
+        x = RNG.randint(90, 1110)
+        y = RNG.randint(300, 430)
+        out.append(f'<circle cx="{x}" cy="{y}" r="1.5" fill="#d5d98a" opacity=".8"><animate attributeName="opacity" values=".15;.9;.15" dur="{RNG.randint(2,5)}s" repeatCount="indefinite" begin="{RNG.randint(0,4)}s"/></circle>')
 
-level_map = {
-    "NONE": 0,
-    "FIRST_QUARTILE": 1,
-    "SECOND_QUARTILE": 2,
-    "THIRD_QUARTILE": 3,
-    "FOURTH_QUARTILE": 4,
-}
+    # Cat walks along the foreground path. Moderate pace; bob and tail movement.
+    out.append('<g class="walker">')
+    out.append('<animateTransform attributeName="transform" type="translate" values="145 0; 875 0; 145 0" dur="30s" repeatCount="indefinite"/>')
+    out.append('<animate attributeName="opacity" values="1;1;1" dur="30s" repeatCount="indefinite"/>')
+    out.append(draw_cat(0, 354))
+    out.append('</g>')
+    out.append('<style><![CDATA['
+               '.walker{animation:walk 30s linear infinite;transform-box:fill-box;}'
+               '.tail{animation:tail 1.6s ease-in-out infinite;transform-box:fill-box;}'
+               '@keyframes tail{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(16deg)}}'
+               ']]></style>')
 
-for week_index, week in enumerate(weeks):
-    for day_index, day in enumerate(week["contributionDays"]):
+    # Footer ornament.
+    out.append(text(30, 454, "KEEP WANDERING.", 8, "#7f917f", 'letter-spacing="2"'))
+    out.append(text(1170, 454, "✦", 12, "#a9b88a", 'text-anchor="end"'))
+    out.append('</svg>')
+    return "\n".join(out)
 
-        level = level_map.get(day["contributionLevel"], 0)
-        day_date = day["date"]
 
-        x = X_START + week_index * STEP
-        y = Y_START + day_index * STEP
+def main():
+    data = github_contributions()
+    svg = make_svg(data)
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT.write_text(svg, encoding="utf-8")
+    print(f"Generated {OUTPUT} with {len(data['days'])} days and {data['total']} contributions.")
 
-        tile_rng = random.Random(day_date)
 
-        # Unique clip region for grass details
-        clip_id = f"tile-{week_index}-{day_index}"
-
-        add(f"""
-        <defs>
-          <clipPath id="{clip_id}">
-            <rect x="{x}" y="{y}" width="{CELL}" height="{CELL}" rx="2"/>
-          </clipPath>
-        </defs>
-        """)
-
-        add(f'<g clip-path="url(#{clip_id})">')
-
-        # Base grass colour
-        rect(x, y, CELL, CELL, GRASS[level])
-
-        # Grass texture
-        blade_count = 1 + level * 2
-
-        for _ in range(blade_count):
-            gx = x + tile_rng.randint(1, 13)
-            gy = y + tile_rng.randint(5, 14)
-            height = tile_rng.randint(2, 5)
-
-            add(
-                f'<path d="M{gx} {gy} l-1 -{height}" '
-                f'stroke="#B6DC76" stroke-width="1" '
-                f'opacity="{0.22 + level * 0.13}"/>'
-            )
-
-        # Small darker grass patches
-        if level > 0:
-            for _ in range(1 + level):
-                gx = x + tile_rng.randint(2, 11)
-                gy = y + tile_rng.randint(3, 12)
-
-                rect(
-                    gx,
-                    gy,
-                    2,
-                    2,
-                    "#173B2B",
-                    extra='opacity="0.35"',
-                )
-
-        # Flowers become more common at higher levels
-        if level >= 2 and tile_rng.random() < 0.16:
-            fx = x + tile_rng.randint(3, 10)
-            fy = y + tile_rng.randint(3, 10)
-
-            flower = tile_rng.choice([
-                "#F2D7A0",
-                "#EAA8B4",
-                "#F2EAC4",
-            ])
-
-            rect(fx, fy, 2, 2, flower)
-
-        add("</g>")
-
-        # Subtle tile border
-        add(
-            f'<rect x="{x}" y="{y}" width="{CELL}" height="{CELL}" '
-            f'rx="2" fill="none" stroke="#C3D8A0" '
-            f'stroke-opacity="0.12" stroke-width="0.6"/>'
-        )
-
-# ============================================================
-# 8. FOREST FLOOR, FLOWERS AND MUSHROOMS
-# ============================================================
-
-for _ in range(85):
-    x = random.randint(75, 1080)
-    y = random.randint(300, 375)
-
-    # Small grass tufts
-    add(
-        f'<path d="M{x} {y} l-3 -5 M{x} {y} l2 -7 '
-        f'M{x} {y} l5 -4" stroke="#477B43" '
-        f'stroke-width="2" fill="none" opacity="0.8"/>'
-    )
-
-# Mushrooms
-add("""
-<g shape-rendering="crispEdges">
-  <rect x="145" y="318" width="7" height="12" fill="#E7D5AD"/>
-  <rect x="138" y="313" width="21" height="7" fill="#C96B50"/>
-  <rect x="142" y="310" width="13" height="4" fill="#E18A61"/>
-  <rect x="145" y="314" width="3" height="2" fill="#FFF0C7"/>
-
-  <rect x="1000" y="333" width="7" height="11" fill="#E7D5AD"/>
-  <rect x="994" y="329" width="18" height="6" fill="#C96B50"/>
-  <rect x="998" y="326" width="10" height="4" fill="#E18A61"/>
-</g>
-""")
-
-# ============================================================
-# 9. POND AND WATER REFLECTIONS
-# ============================================================
-
-add("""
-<path d="
-M270 360 Q390 320 515 350
-Q650 375 760 345
-Q875 315 1000 360
-L1000 390 L270 390 Z"
-fill="url(#pond)"/>
-
-<g stroke="#5B9A92" stroke-width="2" opacity="0.5">
-  <path d="M365 365 h45"/>
-  <path d="M480 375 h65"/>
-  <path d="M685 360 h55"/>
-  <path d="M800 375 h35"/>
-  <path d="M900 355 h48"/>
-</g>
-
-<!-- Lily pads -->
-<g fill="#43865A">
-  <ellipse cx="580" cy="365" rx="15" ry="5"/>
-  <ellipse cx="850" cy="380" rx="12" ry="4"/>
-</g>
-
-<g fill="#E8C6A0">
-  <rect x="579" y="359" width="3" height="3"/>
-  <rect x="847" y="375" width="3" height="3"/>
-</g>
-""")
-
-# ============================================================
-# 10. ANIMATED ORANGE-AND-WHITE CAT
-# ============================================================
-
-add("""
-<!-- Cat walking across the meadow -->
-<g id="cat" shape-rendering="crispEdges">
-
-  <animateTransform
-    attributeName="transform"
-    type="translate"
-    values="0 0; 520 0; 520 0; 0 0"
-    keyTimes="0; 0.45; 0.55; 1"
-    dur="24s"
-    repeatCount="indefinite"/>
-
-  <!-- Tail -->
-  <g transform="translate(0 0)">
-    <rect x="0" y="0" width="7" height="15"
-          fill="#E28D45" transform="translate(217 103)"/>
-    <rect x="0" y="0" width="7" height="6"
-          fill="#F5D8B3" transform="translate(217 115)"/>
-
-    <animateTransform
-      attributeName="transform"
-      additive="sum"
-      type="rotate"
-      values="-12 220 115; 14 220 115; -12 220 115"
-      dur="1.5s"
-      repeatCount="indefinite"/>
-  </g>
-
-  <!-- Body -->
-  <rect x="225" y="105" width="33" height="18" fill="#E28D45"/>
-  <rect x="233" y="116" width="19" height="7" fill="#F5E7CC"/>
-  <rect x="240" y="105" width="8" height="6" fill="#F5E7CC"/>
-
-  <!-- Head -->
-  <rect x="254" y="99" width="22" height="21" fill="#E28D45"/>
-  <rect x="255" y="93" width="7" height="9" fill="#E28D45"/>
-  <rect x="268" y="93" width="8" height="9" fill="#E28D45"/>
-
-  <!-- Inner ears -->
-  <rect x="257" y="96" width="3" height="4" fill="#F4B3A2"/>
-  <rect x="270" y="96" width="3" height="4" fill="#F4B3A2"/>
-
-  <!-- Face -->
-  <rect x="258" y="106" width="3" height="3" fill="#17202A"/>
-  <rect x="269" y="106" width="3" height="3" fill="#17202A"/>
-  <rect x="263" y="112" width="4" height="2" fill="#F4B3A2"/>
-
-  <!-- White muzzle -->
-  <rect x="260" y="111" width="4" height="4" fill="#F5E7CC"/>
-  <rect x="266" y="111" width="4" height="4" fill="#F5E7CC"/>
-
-  <!-- Legs -->
-  <g>
-    <rect x="229" y="120" width="7" height="8" fill="#E28D45"/>
-    <rect x="250" y="120" width="7" height="8" fill="#F5E7CC"/>
-
-    <animateTransform
-      attributeName="transform"
-      type="translate"
-      values="0 0; 0 -3; 0 0"
-      dur="0.45s"
-      repeatCount="indefinite"/>
-  </g>
-
-  <!-- Front paw -->
-  <rect x="266" y="119" width="8" height="8" fill="#F5E7CC"/>
-
-  <!-- Cat shadow -->
-  <ellipse cx="250" cy="132" rx="31" ry="3"
-           fill="#061713" opacity="0.55"/>
-
-</g>
-""")
-
-# ============================================================
-# 11. ANIMATED FIREFLIES
-# ============================================================
-
-for i in range(12):
-    x = random.randint(90, 1080)
-    y = random.randint(90, 300)
-    delay = random.randint(0, 8)
-
-    add(f"""
-    <circle cx="{x}" cy="{y}" r="2.2"
-            fill="#D9F59A" opacity="0.15">
-      <animate attributeName="opacity"
-               values="0.1;0.95;0.1"
-               dur="{random.randint(2, 5)}s"
-               begin="-{delay}s"
-               repeatCount="indefinite"/>
-      <animate attributeName="cy"
-               values="{y};{y - 9};{y}"
-               dur="{random.randint(3, 6)}s"
-               begin="-{delay}s"
-               repeatCount="indefinite"/>
-    </circle>
-    """)
-
-# ============================================================
-# 12. CONTRIBUTION LEGEND
-# ============================================================
-
-text_element(825, 372, "Less", size=11, colour="#B4C9AD")
-
-for i, colour in enumerate(GRASS):
-    rect(860 + i * 20, 358, 15, 15, colour, radius=2)
-
-text_element(970, 372, "More", size=11, colour="#B4C9AD")
-
-# Total contribution label
-text_element(
-    48,
-    372,
-    f"{total_contributions:,} contributions in the last year",
-    size=11,
-    colour="#9CB7A3",
-)
-
-# ============================================================
-# 13. SAVE SVG
-# ============================================================
-
-add("</svg>")
-
-OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-OUTPUT.write_text("\n".join(svg), encoding="utf-8")
-
-print(f"Generated: {OUTPUT}")
-print(f"Contribution total: {total_contributions}")
-print(f"Calendar weeks: {len(weeks)}")
-print("Meadow generation completed successfully.")
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        sys.exit(1)

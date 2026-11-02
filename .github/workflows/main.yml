@@ -1,4 +1,3 @@
-
 name: Generate Contribution Meadow
 
 on:
@@ -11,12 +10,12 @@ permissions:
 
 jobs:
   generate:
-    name: Generate Pixel-Art Meadow
+    name: Generate Dark Fantasy Meadow
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Checkout repository
+      - name: Check out repository
         uses: actions/checkout@v5
 
       - name: Set up Python
@@ -29,7 +28,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/generate-meadow.py
 
-      - name: Publish meadow to output branch
+      - name: Publish SVG to output branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
