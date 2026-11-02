@@ -10,6 +10,12 @@
 
 </div>
 
+<div align="center">
+
+<sub>🌌 *"The Earth is the cradle of humanity, but one cannot live in a cradle forever."* · Tsiolkovsky</sub>
+
+</div>
+
 ---
 
 ## 🛰️ About Me
@@ -62,11 +68,7 @@ My technical interests span Machine Learning, Deep Learning, and Computer Vision
 
 ---
 
-<div align="center">
 
-<sub>🌌 *"The Earth is the cradle of humanity, but one cannot live in a cradle forever."* · Tsiolkovsky</sub>
-
-</div>
 
 
 <div align="center">
