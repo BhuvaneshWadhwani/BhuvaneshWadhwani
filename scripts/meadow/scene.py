@@ -45,24 +45,25 @@ P = {k: hexc(v) for k, v in {
 
 
 class Mask:
-    def __init__(self) -> None:
-        self.on = [[False] * W for _ in range(H)]
+    def __init__(self, w: int = W, h: int = H) -> None:
+        self.w, self.h = w, h
+        self.on = [[False] * w for _ in range(h)]
 
     def set(self, x: int, y: int) -> None:
-        if 0 <= x < W and 0 <= y < H:
+        if 0 <= x < self.w and 0 <= y < self.h:
             self.on[y][x] = True
 
     def __call__(self, x: int, y: int) -> bool:
-        return 0 <= x < W and 0 <= y < H and self.on[y][x]
+        return 0 <= x < self.w and 0 <= y < self.h and self.on[y][x]
 
     def span(self, x0: int, x1: int, y: int) -> None:
         for x in range(x0, x1 + 1):
             self.set(x, y)
 
     def pixels(self):
-        for y in range(H):
+        for y in range(self.h):
             row = self.on[y]
-            for x in range(W):
+            for x in range(self.w):
                 if row[x]:
                     yield x, y
 
@@ -88,21 +89,23 @@ def dither_pick(colours, t: float, x: int, y: int, spread: float = 0.3,
 
 
 # --- sky -------------------------------------------------------------------
-def sky(c: Canvas) -> None:
-    mx, my, mr = MOON
+def sky(c: Canvas, horizon: int = 110, span: float = 105, moon=MOON,
+        star_rows: tuple[int, int] = (4, 80)) -> None:
+    """Banded night sky down to ``horizon``; ``span`` is the depth of the ramp."""
+    mx, my, mr = moon
     ramp = [P["sky0"], P["sky1"], P["sky2"], P["sky3"]]
     rings = ((mr + 3, 0.34), (mr + 8, 0.22), (mr + 17, 0.13), (mr + 31, 0.06))
-    for y in range(110):
-        for x in range(W):
-            colour = dither_pick(ramp, (y / 105) ** 1.1, x, y)
+    for y in range(horizon):
+        for x in range(c.w):
+            colour = dither_pick(ramp, (y / span) ** 1.1, x, y)
             d = math.hypot(x - mx, (y - my) * 1.1)
             for radius, t in rings:                     # banded halo, no checkerboard
                 if d < radius + (bayer(x, y) - 0.5) * 2:
                     colour = mix(colour, P["halo"], t)
                     break
             c.put(x, y, colour)
-    for y in range(4, 80):
-        for x in range(W):
+    for y in range(*star_rows):
+        for x in range(c.w):
             r = hash01(x, y, 101)
             if r > 0.9968 and math.hypot(x - mx, y - my) > mr + 8:
                 bright = hash01(x, y, 102) > 0.8
@@ -112,8 +115,8 @@ def sky(c: Canvas) -> None:
                         c.tint(x + dx, y + dy, P["star"], 0.35)
 
 
-def moon(c: Canvas) -> None:
-    mx, my, mr = MOON
+def moon(c: Canvas, moon=MOON) -> None:
+    mx, my, mr = moon
     for y in range(my - mr - 1, my + mr + 2):
         for x in range(mx - mr - 1, mx + mr + 2):
             dx, dy = x - mx, y - my
@@ -150,16 +153,17 @@ def _shade(c: Canvas, mask: Mask, base, tex, deep, rim, rim_top, seed: int,
         c.put(x, y, colour)
 
 
-def far_forest(c: Canvas) -> None:
-    m = Mask()
-    for x in range(W):
-        top = int(70 + 9 * fbm1(x * 0.012, 3) - 7 * fbm1(x * 0.045, 4))
-        for y in range(top, 112):
+def far_forest(c: Canvas, line: int = 70, bottom: int = 112) -> None:
+    """Distant treeline whose ridge sits around y = ``line``."""
+    m = Mask(c.w, c.h)
+    for x in range(c.w):
+        top = int(line + 9 * fbm1(x * 0.012, 3) - 7 * fbm1(x * 0.045, 4))
+        for y in range(top, bottom):
             m.set(x, y)
     x = -6
-    while x < W + 6:
+    while x < c.w + 6:
         h = 5 + int(hash01(x, 0, 5) * 15)
-        base = int(70 + 9 * fbm1(x * 0.012, 3) - 7 * fbm1(x * 0.045, 4)) + 2
+        base = int(line + 9 * fbm1(x * 0.012, 3) - 7 * fbm1(x * 0.045, 4)) + 2
         tier = 3 + int(hash01(x, 1, 5) * 2)
         for i in range(h):
             hw = int(i * 0.34 * (0.6 + 0.4 * ((i % tier) / tier)))

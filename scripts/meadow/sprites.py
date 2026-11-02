@@ -46,6 +46,41 @@ def draw_text(c: Canvas, x: int, y: int, text: str, colour, shadow=None) -> int:
     return cx - x - 1
 
 
+# --- 7px title font (drawn at 3x stroke weight for the header logo) ----------
+_TITLE = {
+    "A": ".###./#...#/#...#/#####/#...#/#...#/#...#",
+    "B": "####./#...#/#...#/####./#...#/#...#/####.",
+    "E": "#####/#..../#..../####./#..../#..../#####",
+    "H": "#...#/#...#/#...#/#####/#...#/#...#/#...#",
+    "I": "###/.#./.#./.#./.#./.#./###",
+    "M": "#...#/##.##/#.#.#/#.#.#/#...#/#...#/#...#",
+    "N": "#...#/##..#/#.#.#/#..##/#...#/#...#/#...#",
+    "S": ".####/#..../#..../.###./....#/....#/####.",
+    "U": "#...#/#...#/#...#/#...#/#...#/#...#/.###.",
+    "V": "#...#/#...#/#...#/#...#/.#.#./.#.#./..#..",
+    ",": "../../../../../##/.#/#.",
+    "'": "#/#/./././././.",
+    " ": "../../../../../../..",
+}
+TITLE_GLYPHS = {k: v.split("/") for k, v in _TITLE.items()}
+
+
+def title_bits(text: str, scale: int = 3) -> tuple[set, list[int]]:
+    """Pixels of ``text`` in the title font at ``scale``, plus each glyph's right edge."""
+    bits, edges, cx = set(), [], 0
+    for ch in text.upper():
+        rows = TITLE_GLYPHS[ch]
+        for gy, row in enumerate(rows):
+            for gx, bit in enumerate(row):
+                if bit == "#":
+                    for sy in range(scale):
+                        for sx in range(scale):
+                            bits.add((cx + gx * scale + sx, gy * scale + sy))
+        cx += (len(rows[0]) + 1) * scale
+        edges.append(cx - scale)
+    return bits, edges
+
+
 # --- props -----------------------------------------------------------------
 FERN_PAL = {"d": hexc("#14241a"), "g": hexc("#22392a"), "l": hexc("#3a5a3c"),
             "m": hexc("#56784a")}

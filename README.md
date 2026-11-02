@@ -4,7 +4,7 @@
 
 <div align="center">
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=500&size=22&pause=1200&color=00E5FF&center=true&vCenter=true&width=650&height=40&lines=Computer+Vision+%26+Deep+Learning;Machine+Learning+on+Real-World+Data;Geospatial+%26+Remote+Sensing)](https://git.io/typing-svg)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=VT323&weight=400&size=26&pause=1200&color=C6CBB2&center=true&vCenter=true&width=650&height=40&lines=Computer+Vision+%26+Deep+Learning;Machine+Learning+on+Real-World+Data;Geospatial+%26+Remote+Sensing)](https://git.io/typing-svg)
 
 <img src="./assets/rocket-retro.svg" width="100%" alt="Pixel-art space shuttle counting down and launching past satellites" />
 

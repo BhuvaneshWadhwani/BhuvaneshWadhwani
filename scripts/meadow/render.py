@@ -15,6 +15,7 @@ from .calendar import (STONE_W, TOP_H, FRONT_H, arrange, draw_courtyard,
                        draw_day_labels, draw_legend, make_layout)
 from .pixels import Canvas, hash01, hexc
 from .sprites import draw_text, text_width
+from .svgkit import PIXEL_STYLE, cycle, img
 
 W, H, SCALE = scene.W, scene.H, 2.5
 TEXT, TEXT_DIM, TEXT_SHADOW = hexc("#c6cbb2"), hexc("#86927f"), hexc("#050806")
@@ -63,23 +64,6 @@ def paint(days: list[dict], total: int):
     return base, occluder, tiles, lay
 
 
-def _img(canvas: Canvas, x: float = 0, y: float = 0, extra: str = "") -> str:
-    return (f'<image class="px" x="{x}" y="{y}" width="{canvas.w}" height="{canvas.h}" '
-            f'href="{canvas.data_uri()}"{extra}/>')
-
-
-def _cycle(frames: list[Canvas], dur: float, dx: int = 0) -> str:
-    n = len(frames)
-    keys = ";".join(f"{i / n:.4f}" for i in range(n))
-    out = []
-    for i, f in enumerate(frames):
-        vals = ";".join("1" if j == i else "0" for j in range(n))
-        out.append(_img(f, dx, 0, f' opacity="{1 if i == 0 else 0}"').replace(
-            "/>", f'><animate attributeName="opacity" values="{vals}" keyTimes="{keys}" '
-                  f'calcMode="discrete" dur="{dur}s" repeatCount="indefinite"/></image>'))
-    return "".join(out)
-
-
 def _state(index: int, body: str) -> str:
     vals = ";".join("1" if j == index else "0" for j in range(4))
     keys = ";".join(f"{k:.4f}" for k in KEYS[:4])
@@ -99,23 +83,23 @@ def cat_layer() -> str:
                'repeatCount="indefinite"/>')
 
     def glow_at(lx: int) -> str:
-        return _img(glow, lx - glow.w // 2, 14 - glow.h // 2).replace(
+        return img(glow, lx - glow.w // 2, 14 - glow.h // 2).replace(
             "/>", f">{flicker}</image>")
 
     y = scene.PATH_Y - (cat.H - 1)
     shadow = scene.cat_shadow()
     states = [
-        _state(0, _cycle(walk_r, STEP) + glow_at(lantern_r)),
-        _state(1, _cycle(idle_r, 2.8) + glow_at(lantern_r)),
-        _state(2, _cycle(walk_l, STEP) + glow_at(lantern_l)),
-        _state(3, _cycle(idle_l, 2.8) + glow_at(lantern_l)),
+        _state(0, cycle(walk_r, STEP) + glow_at(lantern_r)),
+        _state(1, cycle(idle_r, 2.8) + glow_at(lantern_r)),
+        _state(2, cycle(walk_l, STEP) + glow_at(lantern_l)),
+        _state(3, cycle(idle_l, 2.8) + glow_at(lantern_l)),
     ]
     move = (f'<animateTransform attributeName="transform" type="translate" '
             f'values="{X_START} {y};{X_END} {y};{X_END} {y};{X_START} {y};{X_START} {y}" '
             f'keyTimes="{";".join(f"{k:.4f}" for k in KEYS)}" dur="{CYCLE}s" '
             f'repeatCount="indefinite"/>')
     return (f'<g id="explorer" transform="translate({X_START} {y})">{move}'
-            f'{_img(shadow, 3, cat.H - 2)}{"".join(states)}</g>')
+            f'{img(shadow, 3, cat.H - 2)}{"".join(states)}</g>')
 
 
 def fireflies() -> str:
@@ -160,14 +144,12 @@ def build_svg(days: list[dict], total: int) -> str:
         '<desc id="d">A moonlit enchanted forest with ancient ruins. The contribution calendar '
         'is an overgrown flagstone courtyard: one stone per day, mossier and brighter with more '
         'contributions. An orange cat explorer with a cloak, pack and lantern walks the path.</desc>',
-        '<style>.px{image-rendering:optimizeSpeed;image-rendering:-moz-crisp-edges;'
-        'image-rendering:-webkit-optimize-contrast;image-rendering:crisp-edges;'
-        'image-rendering:pixelated}</style>',
-        _img(base),
-        f'<g opacity=".9">{_img(mist, -20, 92)}<animateTransform attributeName="transform" '
+        PIXEL_STYLE,
+        img(base),
+        f'<g opacity=".9">{img(mist, -20, 92)}<animateTransform attributeName="transform" '
         'type="translate" values="0 0;14 0;0 0" dur="40s" repeatCount="indefinite"/></g>',
         cat_layer(),
-        _img(occluder),
+        img(occluder),
         fireflies(),
         tooltips(tiles),
         "</svg>",
