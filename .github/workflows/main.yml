@@ -1,3 +1,4 @@
+
 name: Generate Contribution Meadow
 
 on:
@@ -10,15 +11,16 @@ permissions:
 
 jobs:
   generate:
+    name: Generate Pixel-Art Meadow
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -27,7 +29,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/generate-meadow.py
 
-      - name: Publish meadow
+      - name: Publish meadow to output branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
