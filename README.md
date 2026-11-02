@@ -75,6 +75,6 @@ My technical interests span Machine Learning, Deep Learning, and Computer Vision
   <img
     src="https://raw.githubusercontent.com/BhuvaneshWadhwani/BhuvaneshWadhwani/output/contribution-meadow.svg"
     width="100%"
-    alt="Dark fantasy pixel-art GitHub contribution meadow"
+    alt="Animated dark fantasy pixel-art GitHub contribution meadow"
   />
 </div>

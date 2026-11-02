@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   generate:
-    name: Generate Dark Fantasy Meadow
+    name: Generate Enchanted Forest Meadow
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
