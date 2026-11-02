@@ -24,7 +24,7 @@ I'm an M.Sc. Social and Economic Data Science student at the University of Konst
 
 Alongside my studies, I work as a Software Developer at w3 data, contributing to the development of existing weather-data processing systems and exploring new methods for processing meteorological data.
 
-My technical interests span Machine Learning, Deep Learning, and Computer Vision, particularly object detection, image analysis, and the application of AI to complex real-world data. I'm also interested in geospatial and remote-sensing applications, alongside broader developments in applied AI.
+My technical interests span Machine Learning, Deep Learning, and Computer Vision, particularly object detection, image analysis, and the application of AI to complex real-world data. I'm also interested in geospatial and remote-sensing applications, together with broader developments in applied AI.
 
 ---
 
